@@ -24,6 +24,68 @@ header {
   border-radius: 5px;
 }
 
+.header-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.admin-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  width: 100%;
+  max-width: 480px;
+}
+
+#admin-btn,
+#admin-status button,
+#admin-form button {
+  background-color: #ffca28;
+  color: #1a237e;
+  border: none;
+  padding: 10px 15px;
+  font-size: 14px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+#admin-btn:hover,
+#admin-status button:hover,
+#admin-form button:hover {
+  background-color: #ffd54f;
+}
+
+#admin-panel {
+  width: 100%;
+  background-color: #ede7f6;
+  border: 1px solid #d1c4e9;
+  border-radius: 5px;
+  padding: 15px;
+}
+
+#admin-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 10px;
+  align-items: end;
+}
+
+#admin-form .form-group.inline {
+  margin-bottom: 0;
+}
+
+#admin-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
 header h1 {
   margin-bottom: 10px;
 }

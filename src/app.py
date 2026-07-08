@@ -5,9 +5,12 @@ A super simple FastAPI application that allows students to view and sign up
 for extracurricular activities at Mergington High School.
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
+from pydantic import BaseModel
+import base64
+import json
 import os
 from pathlib import Path
 
@@ -18,6 +21,55 @@ app = FastAPI(title="Mergington High School API",
 current_dir = Path(__file__).parent
 app.mount("/static", StaticFiles(directory=os.path.join(Path(__file__).parent,
           "static")), name="static")
+
+teachers_file = current_dir / "teachers.json"
+with open(teachers_file, "r", encoding="utf-8") as f:
+    teacher_data = json.load(f)
+teacher_accounts = {
+    teacher["username"]: teacher["password"]
+    for teacher in teacher_data.get("teachers", [])
+}
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+def validate_teacher_credentials(username: str, password: str) -> bool:
+    return teacher_accounts.get(username) == password
+
+
+def get_basic_auth(request: Request):
+    auth_header = request.headers.get("authorization")
+    if not auth_header or not auth_header.lower().startswith("basic "):
+        return None
+
+    encoded = auth_header.split(" ", 1)[1]
+    try:
+        decoded_bytes = base64.b64decode(encoded)
+        decoded = decoded_bytes.decode("utf-8")
+    except (ValueError, UnicodeDecodeError):
+        return None
+
+    if ":" not in decoded:
+        return None
+
+    username, password = decoded.split(":", 1)
+    return username, password
+
+
+def require_admin(request: Request):
+    credentials = get_basic_auth(request)
+    if not credentials or not validate_teacher_credentials(*credentials):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+
+@app.post("/login")
+def login(login: LoginRequest):
+    if validate_teacher_credentials(login.username, login.password):
+        return {"message": "Login successful"}
+    raise HTTPException(status_code=401, detail="Invalid credentials")
+
 
 # In-memory activity database
 activities = {
@@ -89,8 +141,10 @@ def get_activities():
 
 
 @app.post("/activities/{activity_name}/signup")
-def signup_for_activity(activity_name: str, email: str):
+def signup_for_activity(activity_name: str, email: str, request: Request):
     """Sign up a student for an activity"""
+    require_admin(request)
+
     # Validate activity exists
     if activity_name not in activities:
         raise HTTPException(status_code=404, detail="Activity not found")
@@ -111,8 +165,10 @@ def signup_for_activity(activity_name: str, email: str):
 
 
 @app.delete("/activities/{activity_name}/unregister")
-def unregister_from_activity(activity_name: str, email: str):
+def unregister_from_activity(activity_name: str, email: str, request: Request):
     """Unregister a student from an activity"""
+    require_admin(request)
+
     # Validate activity exists
     if activity_name not in activities:
         raise HTTPException(status_code=404, detail="Activity not found")
